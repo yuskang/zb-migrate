@@ -5,12 +5,12 @@
 //! 2. Import them into Zerobrew's management
 //! 3. Handle subsequent updates via Zerobrew
 
-use std::collections::HashMap;
-use std::process::Command;
-use std::path::PathBuf;
-use std::fs;
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
-use anyhow::{Result, Context, bail};
+use std::collections::HashMap;
+use std::fs;
+use std::path::PathBuf;
+use std::process::Command;
 
 /// Represents a Homebrew package with its metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,9 +61,7 @@ impl HomebrewMigrator {
             bail!("brew --prefix failed");
         }
 
-        let prefix = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .to_string();
+        let prefix = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
         Ok(PathBuf::from(prefix))
     }
@@ -95,9 +93,9 @@ impl HomebrewMigrator {
                 packages.push(BrewPackage {
                     name,
                     version,
-                    tap: None,  // Skip tap lookup for speed
+                    tap: None, // Skip tap lookup for speed
                     is_cask: false,
-                    dependencies: Vec::new(),  // Lazy load when needed
+                    dependencies: Vec::new(), // Lazy load when needed
                     pinned,
                 });
             }
@@ -108,9 +106,7 @@ impl HomebrewMigrator {
 
     /// Get all pinned packages at once
     fn get_pinned_packages(&self) -> Result<std::collections::HashSet<String>> {
-        let output = Command::new("brew")
-            .args(["list", "--pinned"])
-            .output()?;
+        let output = Command::new("brew").args(["list", "--pinned"]).output()?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
         Ok(stdout.lines().map(|s| s.to_string()).collect())
@@ -247,9 +243,7 @@ impl HomebrewMigrator {
         println!("Migrating: {} ({})", package.name, package.version);
 
         // Step 1: Install via zerobrew (it will use cache if available)
-        let zb_result = Command::new("zb")
-            .args(["install", &package.name])
-            .output();
+        let zb_result = Command::new("zb").args(["install", &package.name]).output();
 
         match zb_result {
             Ok(output) if output.status.success() => {
@@ -267,12 +261,10 @@ impl HomebrewMigrator {
                     reason: stderr.to_string(),
                 })
             }
-            Err(e) => {
-                Ok(MigrateResult::Failed {
-                    name: package.name.clone(),
-                    reason: format!("Failed to run zb: {}", e),
-                })
-            }
+            Err(e) => Ok(MigrateResult::Failed {
+                name: package.name.clone(),
+                reason: format!("Failed to run zb: {}", e),
+            }),
         }
     }
 
@@ -287,13 +279,19 @@ impl HomebrewMigrator {
             self.list_installed_formulae_detailed()?
         };
 
-        let mut report = MigrationReport::default();
-        report.total_formulae = formulae.len();
-        report.total_casks = casks.len();
+        let mut report = MigrationReport {
+            total_formulae: formulae.len(),
+            total_casks: casks.len(),
+            ..Default::default()
+        };
 
         if dry_run {
             println!("\n=== DRY RUN - No changes will be made ===\n");
-            println!("Found {} formulae and {} casks to migrate:\n", formulae.len(), casks.len());
+            println!(
+                "Found {} formulae and {} casks to migrate:\n",
+                formulae.len(),
+                casks.len()
+            );
 
             for pkg in &formulae {
                 println!("  [formula] {} @ {}", pkg.name, pkg.version);
@@ -319,7 +317,9 @@ impl HomebrewMigrator {
 
         // Note: Casks are currently not supported by zerobrew
         for pkg in &casks {
-            report.skipped.push((pkg.name.clone(), "Casks not yet supported".to_string()));
+            report
+                .skipped
+                .push((pkg.name.clone(), "Casks not yet supported".to_string()));
         }
 
         // Save migration state
@@ -342,13 +342,12 @@ impl HomebrewMigrator {
     fn topological_sort(&self, packages: &[BrewPackage]) -> Result<Vec<BrewPackage>> {
         let mut result = Vec::new();
         let mut visited: std::collections::HashSet<String> = std::collections::HashSet::new();
-        let pkg_map: HashMap<String, &BrewPackage> = packages.iter()
-            .map(|p| (p.name.clone(), p))
-            .collect();
+        let pkg_map: HashMap<String, &BrewPackage> =
+            packages.iter().map(|p| (p.name.clone(), p)).collect();
 
-        fn visit<'a>(
+        fn visit(
             name: &str,
-            pkg_map: &HashMap<String, &'a BrewPackage>,
+            pkg_map: &HashMap<String, &BrewPackage>,
             visited: &mut std::collections::HashSet<String>,
             result: &mut Vec<BrewPackage>,
         ) {

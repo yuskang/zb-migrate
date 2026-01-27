@@ -4,8 +4,8 @@
 
 mod migrate;
 
-use clap::{Parser, Subcommand};
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 use migrate::HomebrewMigrator;
@@ -85,7 +85,11 @@ fn main() -> Result<()> {
                 println!("{:-<50}", "");
                 for pkg in &formulae {
                     let pinned = if pkg.pinned { " [pinned]" } else { "" };
-                    let tap = pkg.tap.as_ref().map(|t| format!(" ({})", t)).unwrap_or_default();
+                    let tap = pkg
+                        .tap
+                        .as_ref()
+                        .map(|t| format!(" ({})", t))
+                        .unwrap_or_default();
                     println!("  {} @ {}{}{}", pkg.name, pkg.version, tap, pinned);
                 }
 
@@ -147,7 +151,10 @@ fn main() -> Result<()> {
             } else {
                 println!("Available updates:");
                 for update in &updates {
-                    println!("  {} {} -> {}", update.name, update.current_version, update.new_version);
+                    println!(
+                        "  {} {} -> {}",
+                        update.name, update.current_version, update.new_version
+                    );
                 }
             }
         }
