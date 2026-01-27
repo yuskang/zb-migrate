@@ -22,3 +22,16 @@ Cargo.lock
 # Environment
 .env
 .env.local
+
+# --- 額外補充 ---
+
+# 預防誤產生的連線字串檔案 (包含 @ 與 IP 的檔案)
+*@192.168.*
+
+# 如果你的 install.sh 會產生臨時日誌或備份
+*.log
+*.bak
+
+# 如果你有使用 Python 腳本協助開發
+__pycache__/
+*.py[cod]
