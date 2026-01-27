@@ -371,46 +371,6 @@ impl HomebrewMigrator {
         Ok(result)
     }
 
-    /// Check for updates and update via zerobrew
-    pub fn check_updates(&self) -> Result<Vec<UpdateInfo>> {
-        let output = Command::new("zb")
-            .args(["outdated"])
-            .output()
-            .context("Failed to check for updates via zerobrew")?;
-
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let mut updates = Vec::new();
-
-        for line in stdout.lines() {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 3 {
-                updates.push(UpdateInfo {
-                    name: parts[0].to_string(),
-                    current_version: parts[1].to_string(),
-                    new_version: parts[2].to_string(),
-                });
-            }
-        }
-
-        Ok(updates)
-    }
-
-    /// Update all packages via zerobrew
-    pub fn update_all(&self) -> Result<()> {
-        println!("Updating all packages via zerobrew...");
-
-        let status = Command::new("zb")
-            .args(["upgrade"])
-            .status()
-            .context("Failed to run zb upgrade")?;
-
-        if !status.success() {
-            bail!("zb upgrade failed");
-        }
-
-        Ok(())
-    }
-
     /// Cleanup: Optionally remove Homebrew packages after migration
     pub fn cleanup_homebrew(&self, packages: &[String], force: bool) -> Result<()> {
         if !force {
@@ -464,13 +424,6 @@ pub struct MigrationReport {
     pub successful: Vec<String>,
     pub failed: Vec<(String, String)>,
     pub skipped: Vec<(String, String)>,
-}
-
-#[derive(Debug)]
-pub struct UpdateInfo {
-    pub name: String,
-    pub current_version: String,
-    pub new_version: String,
 }
 
 impl MigrationReport {

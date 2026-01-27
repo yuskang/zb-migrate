@@ -143,25 +143,23 @@ fn main() -> Result<()> {
         }
 
         Commands::Outdated => {
-            println!("Checking for updates...\n");
-            let updates = migrator.check_updates()?;
-
-            if updates.is_empty() {
-                println!("All packages are up to date.");
-            } else {
-                println!("Available updates:");
-                for update in &updates {
-                    println!(
-                        "  {} {} -> {}",
-                        update.name, update.current_version, update.new_version
-                    );
-                }
-            }
+            println!("Note: Zerobrew does not currently support checking for updates.\n");
+            println!("To check for updates on packages still in Homebrew:");
+            println!("  brew outdated\n");
+            println!("To update a Zerobrew package, reinstall it:");
+            println!("  zb uninstall <package>");
+            println!("  zb install <package>");
         }
 
         Commands::Upgrade => {
-            migrator.update_all()?;
-            println!("Upgrade complete!");
+            println!("Note: Zerobrew does not currently support bulk upgrades.\n");
+            println!("To upgrade packages still in Homebrew:");
+            println!("  brew upgrade\n");
+            println!("To upgrade a Zerobrew package, reinstall it:");
+            println!("  zb uninstall <package>");
+            println!("  zb install <package>\n");
+            println!("To list installed Zerobrew packages:");
+            println!("  zb list");
         }
 
         Commands::Cleanup { force } => {
