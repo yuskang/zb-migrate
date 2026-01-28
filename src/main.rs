@@ -6,6 +6,7 @@ mod migrate;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use console::{style, set_colors_enabled};
 use std::path::PathBuf;
 
 use migrate::HomebrewMigrator;
@@ -14,6 +15,14 @@ use migrate::HomebrewMigrator;
 #[command(name = "zb-migrate")]
 #[command(about = "Migrate from Homebrew to Zerobrew", long_about = None)]
 struct Cli {
+    /// Enable verbose output (show commands, output, and timing)
+    #[arg(short, long, global = true)]
+    verbose: bool,
+
+    /// Disable colored output
+    #[arg(long, global = true)]
+    no_color: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -47,6 +56,10 @@ enum Commands {
         /// Migrate only specific packages
         #[arg(short, long)]
         packages: Option<Vec<String>>,
+
+        /// Interactive mode - prompt before each package migration
+        #[arg(short, long)]
+        interactive: bool,
     },
 
     /// Check for available updates
@@ -64,11 +77,24 @@ enum Commands {
 
     /// Show migration status
     Status,
+
+    /// Analyze packages and categorize by migration risk
+    Analyze {
+        /// Output as JSON instead of formatted text
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let migrator = HomebrewMigrator::new()?;
+
+    // Handle --no-color flag
+    if cli.no_color {
+        set_colors_enabled(false);
+    }
+
+    let migrator = HomebrewMigrator::new(cli.verbose)?;
 
     match cli.command {
         Commands::List { casks, json } => {
@@ -81,58 +107,101 @@ fn main() -> Result<()> {
                 }
                 println!("{}", serde_json::to_string_pretty(&all_packages)?);
             } else {
-                println!("Installed Homebrew Formulae ({}):", formulae.len());
-                println!("{:-<50}", "");
+                println!("{} {}",
+                    style("📦 Homebrew Formulae").cyan().bold(),
+                    style(format!("({})", formulae.len())).dim()
+                );
+                println!("{}", style("─".repeat(50)).dim());
                 for pkg in &formulae {
-                    let pinned = if pkg.pinned { " [pinned]" } else { "" };
+                    let pinned = if pkg.pinned {
+                        format!(" {}", style("[pinned]").yellow())
+                    } else {
+                        String::new()
+                    };
                     let tap = pkg
                         .tap
                         .as_ref()
-                        .map(|t| format!(" ({})", t))
+                        .map(|t| format!(" {}", style(format!("({})", t)).dim()))
                         .unwrap_or_default();
-                    println!("  {} @ {}{}{}", pkg.name, pkg.version, tap, pinned);
+                    println!("  {:<28} {}{}{}",
+                        style(&pkg.name).white().bold(),
+                        style(&pkg.version).dim(),
+                        tap,
+                        pinned
+                    );
                 }
 
                 if casks {
                     let cask_list = migrator.list_installed_casks()?;
-                    println!("\nInstalled Homebrew Casks ({}):", cask_list.len());
-                    println!("{:-<50}", "");
+                    println!("\n{} {}",
+                        style("🖥️  Homebrew Casks").cyan().bold(),
+                        style(format!("({})", cask_list.len())).dim()
+                    );
+                    println!("{}", style("─".repeat(50)).dim());
                     for pkg in &cask_list {
-                        println!("  {} @ {}", pkg.name, pkg.version);
+                        println!("  {:<28} {}",
+                            style(&pkg.name).white().bold(),
+                            style(&pkg.version).dim()
+                        );
                     }
                 }
             }
         }
 
         Commands::Export { output } => {
-            println!("Exporting to {}...", output.display());
+            println!("{} Exporting to {}...",
+                style("→").cyan().bold(),
+                style(output.display()).white()
+            );
             migrator.export_to_brewfile(&output)?;
-            println!("Done! Brewfile created at {}", output.display());
+            println!("{} Brewfile created at {}",
+                style("✓").green().bold(),
+                style(output.display()).white().bold()
+            );
         }
 
-        Commands::Migrate { dry_run, packages } => {
+        Commands::Migrate { dry_run, packages, interactive } => {
             if let Some(pkg_names) = packages {
                 // Migrate specific packages
                 let all_formulae = migrator.list_installed_formulae()?;
                 for name in pkg_names {
                     if let Some(pkg) = all_formulae.iter().find(|p| p.name == name) {
                         if dry_run {
-                            println!("[DRY RUN] Would migrate: {} @ {}", pkg.name, pkg.version);
+                            println!("{} Would migrate: {} {}",
+                                style("[DRY RUN]").yellow().bold(),
+                                style(&pkg.name).white().bold(),
+                                style(&pkg.version).dim()
+                            );
                         } else {
                             let result = migrator.migrate_package(pkg)?;
                             match result {
                                 migrate::MigrateResult::Success { name, version } => {
-                                    println!("✓ Migrated: {} @ {}", name, version);
+                                    println!("{} {} {} migrated successfully",
+                                        style("✓").green().bold(),
+                                        style(&name).white().bold(),
+                                        style(&version).dim()
+                                    );
                                 }
                                 migrate::MigrateResult::Failed { name, reason } => {
-                                    println!("✗ Failed: {} - {}", name, reason);
+                                    println!("{} {} failed: {}",
+                                        style("✗").red().bold(),
+                                        style(&name).white().bold(),
+                                        style(&reason).dim()
+                                    );
                                 }
                             }
                         }
                     } else {
-                        println!("Package not found: {}", name);
+                        println!("{} Package not found: {}",
+                            style("✗").red().bold(),
+                            style(&name).yellow()
+                        );
                     }
                 }
+            } else if interactive && !dry_run {
+                // Interactive migration mode
+                let report = migrator.migrate_interactive()?;
+                report.print_summary();
             } else {
                 // Migrate all
                 let report = migrator.migrate_all(dry_run)?;
@@ -143,23 +212,27 @@ fn main() -> Result<()> {
         }
 
         Commands::Outdated => {
-            println!("Note: Zerobrew does not currently support checking for updates.\n");
+            println!("{} Zerobrew does not currently support checking for updates.\n",
+                style("ℹ").cyan().bold()
+            );
             println!("To check for updates on packages still in Homebrew:");
-            println!("  brew outdated\n");
-            println!("To update a Zerobrew package, reinstall it:");
-            println!("  zb uninstall <package>");
-            println!("  zb install <package>");
+            println!("  {}", style("brew outdated").white().bold());
+            println!("\nTo update a Zerobrew package, reinstall it:");
+            println!("  {}", style("zb uninstall <package>").white().bold());
+            println!("  {}", style("zb install <package>").white().bold());
         }
 
         Commands::Upgrade => {
-            println!("Note: Zerobrew does not currently support bulk upgrades.\n");
+            println!("{} Zerobrew does not currently support bulk upgrades.\n",
+                style("ℹ").cyan().bold()
+            );
             println!("To upgrade packages still in Homebrew:");
-            println!("  brew upgrade\n");
-            println!("To upgrade a Zerobrew package, reinstall it:");
-            println!("  zb uninstall <package>");
-            println!("  zb install <package>\n");
-            println!("To list installed Zerobrew packages:");
-            println!("  zb list");
+            println!("  {}", style("brew upgrade").white().bold());
+            println!("\nTo upgrade a Zerobrew package, reinstall it:");
+            println!("  {}", style("zb uninstall <package>").white().bold());
+            println!("  {}", style("zb install <package>").white().bold());
+            println!("\nTo list installed Zerobrew packages:");
+            println!("  {}", style("zb list").white().bold());
         }
 
         Commands::Cleanup { force } => {
@@ -167,7 +240,9 @@ fn main() -> Result<()> {
             let packages: Vec<String> = state.migrated_packages.keys().cloned().collect();
 
             if packages.is_empty() {
-                println!("No migrated packages to clean up.");
+                println!("{} No migrated packages to clean up.",
+                    style("ℹ").cyan().bold()
+                );
             } else {
                 migrator.cleanup_homebrew(&packages, force)?;
             }
@@ -175,23 +250,45 @@ fn main() -> Result<()> {
 
         Commands::Status => {
             let state = migrator.load_state()?;
-            println!("Migration Status");
-            println!("{:-<50}", "");
-            println!("Migrated packages: {}", state.migrated_packages.len());
-            println!("Failed packages: {}", state.failed_packages.len());
+            println!("{}", style("╭─ Migration Status ─────────────────────╮").cyan());
+            println!("{}  {} Migrated:  {} packages              {}",
+                style("│").cyan(),
+                style("✓").green().bold(),
+                style(state.migrated_packages.len()).white().bold(),
+                style("│").cyan()
+            );
+            println!("{}  {} Failed:    {} packages              {}",
+                style("│").cyan(),
+                style("✗").red().bold(),
+                style(state.failed_packages.len()).white().bold(),
+                style("│").cyan()
+            );
+            println!("{}", style("╰────────────────────────────────────────╯").cyan());
 
             if !state.migrated_packages.is_empty() {
-                println!("\nMigrated:");
+                println!("\n{}", style("Migrated:").green().bold());
                 for (name, pkg) in &state.migrated_packages {
-                    println!("  {} @ {}", name, pkg.version);
+                    println!("  {:<28} {}",
+                        style(name).white().bold(),
+                        style(&pkg.version).dim()
+                    );
                 }
             }
 
             if !state.failed_packages.is_empty() {
-                println!("\nFailed:");
+                println!("\n{}", style("Failed:").red().bold());
                 for name in &state.failed_packages {
-                    println!("  {}", name);
+                    println!("  {}", style(name).red());
                 }
+            }
+        }
+
+        Commands::Analyze { json } => {
+            let report = migrator.analyze_packages()?;
+            if json {
+                println!("{}", report.to_json()?);
+            } else {
+                report.print_summary();
             }
         }
     }
