@@ -39,3 +39,4 @@ __pycache__/
 # Local dev files
 CLAUDE.md
 scripts/
+docs/
