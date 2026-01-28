@@ -48,6 +48,7 @@ fn create_progress_bar(total: u64, message: &str) -> ProgressBar {
 }
 
 /// Create a spinner for indeterminate progress
+#[allow(dead_code)]
 fn create_spinner(message: &str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
 
