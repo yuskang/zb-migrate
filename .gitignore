@@ -34,4 +34,5 @@ Cargo.lock
 
 # 如果你有使用 Python 腳本協助開發
 __pycache__/
-*.py[cod]
+*.py[cod]CLAUDE.md
+scripts/
