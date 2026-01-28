@@ -28,20 +28,17 @@ fn create_progress_bar(total: u64, message: &str) -> ProgressBar {
 
     if is_ci() {
         // Simple style for CI without animations
-        pb.set_style(
-            ProgressStyle::with_template("{msg} [{pos}/{len}]")
-                .unwrap()
-        );
+        pb.set_style(ProgressStyle::with_template("{msg} [{pos}/{len}]").unwrap());
         // Disable steady tick in CI to avoid excessive output
         pb.enable_steady_tick(Duration::from_secs(10));
     } else {
         // Nice animated style for interactive use
         pb.set_style(
             ProgressStyle::with_template(
-                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}"
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}",
             )
             .unwrap()
-            .progress_chars("#>-")
+            .progress_chars("#>-"),
         );
         pb.enable_steady_tick(Duration::from_millis(100));
     }
@@ -55,14 +52,10 @@ fn create_spinner(message: &str) -> ProgressBar {
     let pb = ProgressBar::new_spinner();
 
     if is_ci() {
-        pb.set_style(
-            ProgressStyle::with_template("{msg}")
-                .unwrap()
-        );
+        pb.set_style(ProgressStyle::with_template("{msg}").unwrap());
     } else {
         pb.set_style(
-            ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg}")
-                .unwrap()
+            ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] {msg}").unwrap(),
         );
         pb.enable_steady_tick(Duration::from_millis(100));
     }
@@ -83,24 +76,20 @@ pub const KNOWN_PROBLEMATIC_PACKAGES: &[&str] = &[
     "gnutls",
     "libssh2",
     "libssh",
-
     // Python versions - complex dependency chains
     "python@3.11",
     "python@3.12",
     "python@3.10",
     "python@3.9",
     "python@3.13",
-
     // Event and async libraries - widely depended upon
     "libevent",
     "libuv",
     "libev",
-
     // HTTP/networking libraries
     "nghttp2",
     "curl",
     "wget",
-
     // GLib/GObject ecosystem - complex introspection
     "gobject-introspection",
     "glib",
@@ -108,49 +97,41 @@ pub const KNOWN_PROBLEMATIC_PACKAGES: &[&str] = &[
     "gtk+3",
     "cairo",
     "pango",
-
     // Node.js versions - complex native modules
     "node@20",
     "node@18",
     "node@16",
     "node",
-
     // Database clients with system dependencies
     "postgresql@14",
     "postgresql@15",
     "postgresql@16",
     "mysql-client",
     "libpq",
-
     // Compression libraries
     "zlib",
     "xz",
     "lz4",
     "zstd",
     "brotli",
-
     // Image libraries
     "libpng",
     "libjpeg",
     "libtiff",
     "webp",
-
     // ICU - Unicode support (heavily depended upon)
     "icu4c",
-
     // Build tools that are deeply integrated
     "pkg-config",
     "cmake",
     "autoconf",
     "automake",
     "libtool",
-
     // Ruby versions
     "ruby@3.0",
     "ruby@3.1",
     "ruby@3.2",
     "ruby@3.3",
-
     // Other commonly problematic packages
     "gettext",
     "readline",
@@ -211,9 +192,15 @@ impl AnalysisReport {
 
         // Summary counts
         println!("Summary:");
-        println!("  Safe to migrate:        {} packages", self.safe_to_migrate.len());
+        println!(
+            "  Safe to migrate:        {} packages",
+            self.safe_to_migrate.len()
+        );
         println!("  Risky (use caution):    {} packages", self.risky.len());
-        println!("  Keep in Homebrew:       {} packages", self.should_keep_in_homebrew.len());
+        println!(
+            "  Keep in Homebrew:       {} packages",
+            self.should_keep_in_homebrew.len()
+        );
 
         // Safe packages
         if !self.safe_to_migrate.is_empty() {
@@ -232,14 +219,20 @@ impl AnalysisReport {
                 println!("  [!] {} @ {}", pkg.name, pkg.version);
                 println!("      Reason: {}", pkg.reason);
                 if !pkg.problematic_dependencies.is_empty() {
-                    println!("      Problematic deps: {}", pkg.problematic_dependencies.join(", "));
+                    println!(
+                        "      Problematic deps: {}",
+                        pkg.problematic_dependencies.join(", ")
+                    );
                 }
             }
         }
 
         // Keep in Homebrew
         if !self.should_keep_in_homebrew.is_empty() {
-            println!("\n--- Keep in Homebrew ({}) ---", self.should_keep_in_homebrew.len());
+            println!(
+                "\n--- Keep in Homebrew ({}) ---",
+                self.should_keep_in_homebrew.len()
+            );
             println!("These packages are known to have issues and should remain in Homebrew:\n");
             for pkg in &self.should_keep_in_homebrew {
                 println!("  [X] {} @ {}", pkg.name, pkg.version);
@@ -252,14 +245,20 @@ impl AnalysisReport {
 
         if !self.safe_to_migrate.is_empty() {
             println!("1. Start by migrating safe packages:");
-            println!("   zb-migrate migrate --packages {}",
-                self.safe_to_migrate.iter()
+            println!(
+                "   zb-migrate migrate --packages {}",
+                self.safe_to_migrate
+                    .iter()
                     .take(5)
                     .map(|p| p.name.as_str())
                     .collect::<Vec<_>>()
-                    .join(","));
+                    .join(",")
+            );
             if self.safe_to_migrate.len() > 5 {
-                println!("   (showing first 5 of {} safe packages)", self.safe_to_migrate.len());
+                println!(
+                    "   (showing first 5 of {} safe packages)",
+                    self.safe_to_migrate.len()
+                );
             }
         }
 
@@ -746,7 +745,10 @@ impl HomebrewMigrator {
 
         for (idx, pkg) in sorted.iter().enumerate() {
             // Show package info
-            println!("{}", style(format!("--- Package {}/{} ---", idx + 1, sorted.len())).bold());
+            println!(
+                "{}",
+                style(format!("--- Package {}/{} ---", idx + 1, sorted.len())).bold()
+            );
             println!("  Name:    {}", style(&pkg.name).cyan());
             println!("  Version: {}", pkg.version);
             if let Some(ref tap) = pkg.tap {
@@ -779,17 +781,22 @@ impl HomebrewMigrator {
                     .interact();
 
                 match selection {
-                    Ok(0) => true,  // Yes
-                    Ok(1) => {      // No/Skip
-                        report.skipped.push((pkg.name.clone(), "User skipped".to_string()));
+                    Ok(0) => true, // Yes
+                    Ok(1) => {
+                        // No/Skip
+                        report
+                            .skipped
+                            .push((pkg.name.clone(), "User skipped".to_string()));
                         println!("  {} Skipped\n", style("->").yellow());
                         continue;
                     }
-                    Ok(2) => {      // All yes
+                    Ok(2) => {
+                        // All yes
                         migrate_all_remaining = true;
                         true
                     }
-                    Ok(3) | Err(_) => {  // Quit
+                    Ok(3) | Err(_) => {
+                        // Quit
                         println!("\n{}", style("Migration stopped by user.").yellow());
                         break;
                     }
@@ -800,7 +807,12 @@ impl HomebrewMigrator {
             if should_migrate {
                 match self.migrate_package(pkg)? {
                     MigrateResult::Success { name, version } => {
-                        println!("  {} Migrated: {} @ {}\n", style("OK").green(), name, version);
+                        println!(
+                            "  {} Migrated: {} @ {}\n",
+                            style("OK").green(),
+                            name,
+                            version
+                        );
                         report.successful.push(name);
                     }
                     MigrateResult::Failed { name, reason } => {
@@ -813,7 +825,9 @@ impl HomebrewMigrator {
 
         // Handle casks
         for pkg in &casks {
-            report.skipped.push((pkg.name.clone(), "Casks not yet supported".to_string()));
+            report
+                .skipped
+                .push((pkg.name.clone(), "Casks not yet supported".to_string()));
         }
 
         // Save migration state
@@ -922,10 +936,8 @@ impl HomebrewMigrator {
         let problematic_set: HashSet<&str> = KNOWN_PROBLEMATIC_PACKAGES.iter().copied().collect();
 
         // Build a map of package name -> package for dependency lookup
-        let pkg_map: HashMap<&str, &BrewPackage> = packages
-            .iter()
-            .map(|p| (p.name.as_str(), p))
-            .collect();
+        let pkg_map: HashMap<&str, &BrewPackage> =
+            packages.iter().map(|p| (p.name.as_str(), p)).collect();
 
         let mut report = AnalysisReport::new();
         report.total_packages = total;
@@ -967,11 +979,8 @@ impl HomebrewMigrator {
                 });
             } else {
                 // Check transitive dependencies (dependencies of dependencies)
-                let transitive_problematic = Self::find_transitive_problematic_deps(
-                    pkg,
-                    &pkg_map,
-                    &problematic_set,
-                );
+                let transitive_problematic =
+                    Self::find_transitive_problematic_deps(pkg, &pkg_map, &problematic_set);
 
                 if !transitive_problematic.is_empty() {
                     report.risky.push(PackageAnalysis {
@@ -1000,7 +1009,9 @@ impl HomebrewMigrator {
         // Sort each category alphabetically
         report.safe_to_migrate.sort_by(|a, b| a.name.cmp(&b.name));
         report.risky.sort_by(|a, b| a.name.cmp(&b.name));
-        report.should_keep_in_homebrew.sort_by(|a, b| a.name.cmp(&b.name));
+        report
+            .should_keep_in_homebrew
+            .sort_by(|a, b| a.name.cmp(&b.name));
 
         Ok(report)
     }
@@ -1066,7 +1077,9 @@ impl HomebrewMigrator {
             }
             "gnutls" => "GNU TLS library - system-level security dependency".to_string(),
             "libressl" => "LibreSSL - alternative SSL library with wide usage".to_string(),
-            n if n.starts_with("libssh") => "SSH library - security-critical dependency".to_string(),
+            n if n.starts_with("libssh") => {
+                "SSH library - security-critical dependency".to_string()
+            }
 
             // Python
             n if n.starts_with("python@") || n == "python" => {
@@ -1854,7 +1867,8 @@ mod tests {
         }
 
         assert!(
-            content.contains("tap \"homebrew/core\"") || content.contains("tap \"user/custom-tap\"")
+            content.contains("tap \"homebrew/core\"")
+                || content.contains("tap \"user/custom-tap\"")
         );
         assert!(content.contains("brew \"neovim\""));
         assert!(content.contains("brew \"custom-tool\""));
