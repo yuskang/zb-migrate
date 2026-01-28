@@ -6,12 +6,16 @@ A CLI tool to migrate packages from Homebrew to [Zerobrew](https://github.com/lu
 
 ## Features
 
-- List all installed Homebrew packages (formulae & casks)
-- Export to Brewfile format
-- Migrate packages to Zerobrew with dependency ordering
-- Track migration status
-- Handle subsequent updates via Zerobrew
-- Clean up Homebrew after successful migration
+- **List** all installed Homebrew packages (formulae & casks)
+- **Analyze** packages and categorize by migration risk (v0.1.7+)
+- **Export** to Brewfile format
+- **Migrate** packages to Zerobrew with dependency ordering
+- **Interactive mode** - step-by-step migration with prompts (v0.1.7+)
+- **Progress bar** - visual feedback during migration (v0.1.7+)
+- **Track** migration status
+- **Colored output** with `--no-color` option for CI (v0.1.7+)
+- **Verbose mode** for debugging (v0.1.7+)
+- **Clean up** Homebrew after successful migration
 
 ## Installation
 
@@ -44,6 +48,16 @@ cargo install --git https://github.com/yuskang/zb-migrate.git
 
 ## Usage
 
+### Global Options
+
+```bash
+# Enable verbose output (show commands, timing, exit codes)
+zb-migrate -v <command>
+
+# Disable colored output (for CI/pipelines)
+zb-migrate --no-color <command>
+```
+
 ### List Installed Packages
 
 ```bash
@@ -56,6 +70,21 @@ zb-migrate list --casks
 # Output as JSON
 zb-migrate list --json
 ```
+
+### Analyze Migration Risk (v0.1.7+)
+
+```bash
+# Analyze all packages and show recommendations
+zb-migrate analyze
+
+# Output as JSON
+zb-migrate analyze --json
+```
+
+This categorizes packages into:
+- ✅ **Safe to migrate** - No known issues
+- ⚠️ **Risky** - Depends on problematic packages
+- ❌ **Keep in Homebrew** - Known to cause conflicts
 
 ### Export Brewfile
 
@@ -71,6 +100,9 @@ zb-migrate migrate --dry-run
 
 # Execute migration
 zb-migrate migrate
+
+# Interactive mode - confirm each package (v0.1.7+)
+zb-migrate migrate -i
 
 # Migrate specific packages only
 zb-migrate migrate -p git -p node

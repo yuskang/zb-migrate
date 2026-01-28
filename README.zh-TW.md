@@ -6,12 +6,16 @@
 
 ## 功能特色
 
-- 列出所有已安裝的 Homebrew 套件（formulae 和 casks）
-- 匯出為 Brewfile 格式
-- 按依賴順序遷移套件到 Zerobrew
-- 追蹤遷移狀態
-- 透過 Zerobrew 處理後續更新
-- 遷移成功後清理 Homebrew
+- **列出**所有已安裝的 Homebrew 套件（formulae 和 casks）
+- **分析**套件遷移風險並分類建議（v0.1.7+）
+- **匯出**為 Brewfile 格式
+- **遷移**套件到 Zerobrew，依照依賴順序處理
+- **互動模式** - 逐一確認每個套件的遷移（v0.1.7+）
+- **進度條** - 遷移過程視覺化回饋（v0.1.7+）
+- **追蹤**遷移狀態
+- **彩色輸出**，支援 `--no-color` 選項供 CI 使用（v0.1.7+）
+- **詳細模式**用於除錯（v0.1.7+）
+- **清理** Homebrew 成功遷移後的殘留
 
 ## 安裝方式
 
@@ -44,6 +48,16 @@ cargo install --git https://github.com/yuskang/zb-migrate.git
 
 ## 使用方式
 
+### 全域選項
+
+```bash
+# 啟用詳細輸出（顯示命令、時間、退出代碼）
+zb-migrate -v <command>
+
+# 停用彩色輸出（適用於 CI/管道環境）
+zb-migrate --no-color <command>
+```
+
 ### 列出已安裝套件
 
 ```bash
@@ -56,6 +70,21 @@ zb-migrate list --casks
 # 以 JSON 格式輸出
 zb-migrate list --json
 ```
+
+### 分析遷移風險（v0.1.7+）
+
+```bash
+# 分析所有套件並顯示建議
+zb-migrate analyze
+
+# 以 JSON 格式輸出
+zb-migrate analyze --json
+```
+
+這會將套件分為三類：
+- ✅ **可安全遷移** - 無已知問題
+- ⚠️ **有風險** - 依賴有問題的套件
+- ❌ **保留在 Homebrew** - 已知會產生衝突
 
 ### 匯出 Brewfile
 
@@ -71,6 +100,9 @@ zb-migrate migrate --dry-run
 
 # 執行遷移
 zb-migrate migrate
+
+# 互動模式 - 逐一確認每個套件（v0.1.7+）
+zb-migrate migrate -i
 
 # 僅遷移特定套件
 zb-migrate migrate -p git -p node
